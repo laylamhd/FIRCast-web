@@ -1,0 +1,169 @@
+/* =====================================================================
+   FIRCast · base.css
+   Shared by every page: design tokens (colours, fonts, shadows, easing),
+   a small reset, the skip link, the floating navigation bar, buttons and
+   the screen-reader-only helper. Load this file FIRST on every page.
+
+   How colour works: every colour is a CSS custom property ("token") on
+   :root. Rules never hard-code a brand colour; they use var(--token).
+   Change a colour once here and every page follows.
+   ===================================================================== */
+
+/* ---- Design tokens: change colours here, not inside rules ---- */
+:root {
+  /* Brand palette (Pantone) */
+  --powder-blue: #84B4E6;   /* 14-4214 TCX */
+  --sweet-corn:  #FBF4DB;   /* 11-0106 TCX */
+  --spicy-orange:#DD110A;   /* 18-1445 TCX */
+
+  /* Text colours: dark navy added because cream or orange text
+     on Powder Blue is too faint to read (contrast below 2.4) */
+  --ink:   #13233A;         /* main text: 7.3 contrast on blue */
+  --muted: #2B4566;         /* secondary text: 4.5 on blue */
+
+  /* Roles */
+  --bg: var(--powder-blue);
+  --surface: var(--sweet-corn);
+  --text: var(--ink);
+  --line: rgba(19, 35, 58, 0.16);
+  --accent: var(--spicy-orange);   /* main button */
+  --accent-ink: var(--sweet-corn); /* text on orange: 4.6 contrast */
+
+  /* Sector busy levels (calm blue -> hot orange) */
+  --ok:   var(--powder-blue);  /* normal */
+  --busy: #F3C63F;             /* busy: butter yellow */
+  --over: var(--spicy-orange); /* overloaded */
+
+  /* Fonts */
+  --font-display: 'Bricolage Grotesque', system-ui, sans-serif; /* headlines, big numbers, hero sentence */
+  --font-ui: 'Manrope', system-ui, sans-serif;          /* everything else */
+  /* Bricolage changes shape with size ("optical size", 12 to 96).
+     14 is the look from the font comparison page. Try 96 for a
+     tighter, quirkier headline style. */
+  --display-opsz: "opsz" 14;
+
+  /* Card depth (soft navy shadows) */
+  --lift: inset 0 1px 0 rgba(255, 255, 255, 0.7),
+          0 30px 60px -16px rgba(19, 35, 58, 0.5),
+          0 10px 20px -10px rgba(19, 35, 58, 0.35);
+  --lift-small: 0 14px 30px -12px rgba(19, 35, 58, 0.45);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+/* Page background and default text: navy text on powder blue, Manrope font. */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Skip link (keyboard users) ---- */
+.skip {
+  position: absolute; left: 16px; top: -48px; z-index: 20;
+  padding: 8px 12px; border-radius: 8px;
+  background: var(--ink); color: var(--sweet-corn);
+  font-size: 14px; line-height: 20px; font-weight: 600; text-decoration: none;
+  transition: transform 300ms var(--ease);
+}
+.skip:focus { transform: translateY(64px); }
+
+/* ---- Floating navigation bar ---- */
+.nav {
+  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);   /* sits at the top of the page and scrolls away */
+  z-index: 10;
+  display: flex; align-items: center; gap: 4px;
+  padding: 8px 8px 8px 16px;
+  background: rgba(251, 244, 219, 0.82);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 9999px;
+}
+/* The FIRCast logo + name link (left end of the nav bar). */
+.brand {
+  display: flex; align-items: center; gap: 8px;
+  color: var(--text); text-decoration: none;
+  font-size: 16px; line-height: 24px; font-weight: 600;
+}
+.brand-logo { display: block; height: 32px; width: auto; }
+
+/* ---- Nav shrinks to the logo, top left, once the page is scrolled ---- */
+.nav {
+  transition: left 600ms var(--ease), transform 600ms var(--ease),
+              gap 600ms var(--ease), padding 600ms var(--ease);
+}
+.brand { transition: gap 600ms var(--ease); }
+/* These two collapse to zero width when the bar is compact (the max-width animates). */
+.brand-name, .nav-links {
+  max-width: 320px; overflow: hidden; white-space: nowrap;
+  transition: max-width 600ms var(--ease), opacity 400ms var(--ease);
+}
+.nav-links { padding: 2px; margin: -2px; }        /* room for focus outlines */
+.nav.is-compact { left: 16px; transform: translateX(0); gap: 0; padding: 6px; }
+.nav.is-compact .brand { gap: 0; }
+.nav.is-compact .brand-name,
+/* Compact bar: hide the name and links (visibility switches off after the slide). */
+.nav.is-compact .nav-links {
+  max-width: 0; opacity: 0; visibility: hidden;
+  transition: max-width 600ms var(--ease), opacity 250ms var(--ease), visibility 0s 600ms;
+}
+/* keyboard users: focusing the logo opens the full bar again */
+.nav.is-compact:focus-within { left: 50%; transform: translateX(-50%); gap: 4px; padding: 6px; }
+.nav.is-compact:focus-within .brand { gap: 8px; }
+.nav.is-compact:focus-within .brand-name,
+.nav.is-compact:focus-within .nav-links { max-width: 320px; opacity: 1; visibility: visible; transition: max-width 600ms var(--ease), opacity 400ms var(--ease); }
+@media (prefers-reduced-motion: reduce) {
+  .nav, .brand, .brand-name, .nav-links,
+  .nav.is-compact .brand-name, .nav.is-compact .nav-links { transition: none; }
+}
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-link {                                    /* same height and type as the brand pill */
+  padding: 8px 16px; border-radius: 9999px;
+  color: var(--ink); text-decoration: none;
+  font-size: 16px; line-height: 24px; font-weight: 600;
+  transition: background-color 300ms var(--ease);
+}
+.nav-link:hover { background: rgba(19, 35, 58, 0.08); }
+/* current page: a navy pill (the brand on the home page, Map on the map page) */
+.brand { padding: 4px 14px 4px 8px; border-radius: 9999px; transition: background-color 300ms var(--ease), color 300ms var(--ease), gap 600ms var(--ease); }
+.brand:hover { background: rgba(19, 35, 58, 0.08); }
+.nav-link[aria-current="page"], .brand[aria-current="page"],
+.nav-link[aria-current="page"]:hover, .brand[aria-current="page"]:hover { background: var(--ink); color: var(--sweet-corn); }
+.brand[aria-current="page"] .brand-logo { filter: brightness(0) invert(1) sepia(0.25); }   /* navy logo turns cream */
+.nav.is-compact .brand { padding: 4px; }
+.nav { padding: 6px; }
+.nav-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px;
+  border-radius: 9999px;
+  background: var(--accent); color: var(--accent-ink);
+  font-size: 16px; line-height: 24px; font-weight: 600;
+  text-decoration: none;
+  transition: transform 300ms var(--ease), opacity 300ms var(--ease);
+}
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: scale(0.98); }
+/* Keyboard focus ring for buttons and the logo. */
+.btn:focus-visible, .cue:focus-visible, .brand:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 4px;
+}
+/* Smaller button size. */
+.btn-sm {
+  font-size: 14px; line-height: 20px;
+  background: var(--ink); color: var(--sweet-corn);
+}
+.btn svg { transition: transform 300ms var(--ease); }
+.btn:hover svg { transform: translateX(2px); }
+
+/* ---- Screen-reader-only text ---- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}

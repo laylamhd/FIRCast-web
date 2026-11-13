@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Full map · FIRCast</title>
+  <meta name="description" content="A full map of the UAE region with FIRCast's sectors, routes, waypoints and live simulated traffic, in 2D and 3D.">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+
+  <!-- Fonts: Bricolage Grotesque for headlines and big numbers, Manrope for everything else -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Data sources: FIR, waypoints and ATS routes from the UAE eAIP (AIRAC AMDT 09/2026).
+       Land: Natural Earth (public domain). Sectors, altitude bands and flights are placeholders. -->
+
+  <!-- Styles: shared base first, then this page's own file -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/map.css">
+</head>
+
+<body>
+  <!-- Skip link: hidden until a keyboard user presses Tab, then jumps straight to the content -->
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- Navigation bar. aria-current="page" on Map turns that link into the navy pill (base.css) -->
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="index.html" aria-label="FIRCast home">
+      <img class="brand-logo" src="assets/images/logo.png" width="39" height="32" alt="">
+      <span class="brand-name">FIRCast</span>
+    </a>
+    <div class="nav-links">
+      <a class="nav-link" href="map.html" aria-current="page">Map</a>
+    </div>
+  </nav>
+
+  <!-- Faded radar sweep behind the whole page (radar-background.js) -->
+  <canvas id="radar" aria-hidden="true"></canvas>
+
+  <!-- All page content. The id is the target of the skip link above -->
+  <main id="main">
+    <h1>The full map</h1>
+
+    <!-- The big map card: header controls, the map canvas, the plane panel and the footer -->
+    <section class="map-card" aria-label="Map of the UAE region with sectors, routes and traffic">
+      <!-- Header: title, 2D / 3D switch, sector dropdown (top right) -->
+      <div class="map-head">
+        <p class="map-title">UAE region · 7 sectors</p>
+        <div class="head-controls">
+          <!-- 2D / 3D switch. aria-pressed tells assistive tech which view is on -->
+          <div class="seg" role="group" aria-label="View">
+            <button type="button" id="view-2d" aria-pressed="true">2D</button>
+            <button type="button" id="view-3d" aria-pressed="false">3D</button>
+          </div>
+          <!-- Dropdown: pick a sector and choose which layers to show -->
+          <div class="menu" id="menu">
+            <button type="button" class="menu-btn" id="menu-btn" aria-expanded="false" aria-controls="menu-panel" aria-label="Sectors and map layers">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3 L22 8 L12 13 L2 8 Z"/><path d="M2 12.5 L12 17.5 L22 12.5"/><path d="M2 17 L12 22 L22 17"/>
+              </svg>
+            </button>
+            <!-- The dropdown is a real <form>: radio buttons choose one sector, checkboxes toggle layers. -->
+            <!-- map.js listens for its 'change' event and redraws -->
+            <form class="menu-panel" id="menu-panel" hidden>
+              <fieldset>
+                <legend>Sector</legend>
+                <div class="chips">
+                  <label class="chip"><input type="radio" name="sector" value="all" checked>All</label>
+                  <label class="chip"><input type="radio" name="sector" value="S1">S1</label>
+                  <label class="chip"><input type="radio" name="sector" value="S2">S2</label>
+                  <label class="chip"><input type="radio" name="sector" value="S3">S3</label>
+                  <label class="chip"><input type="radio" name="sector" value="S4">S4</label>
+                  <label class="chip"><input type="radio" name="sector" value="S5">S5</label>
+                  <label class="chip"><input type="radio" name="sector" value="S6">S6</label>
+                  <label class="chip"><input type="radio" name="sector" value="S7">S7</label>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Show on map</legend>
+                <label class="switch-row">
+                  <svg width="18" height="18" viewBox="-1.1 -1.1 2.2 2.2" aria-hidden="true"><path fill="#2A5CAA" d="M1 0 L0.8 0.09 L0.2 0.11 L-0.15 0.9 L-0.35 0.9 L-0.2 0.11 L-0.65 0.09 L-0.85 0.42 L-1 0.42 L-0.92 0 L-1 -0.42 L-0.85 -0.42 L-0.65 -0.09 L-0.2 -0.11 L-0.35 -0.9 L-0.15 -0.9 L0.2 -0.11 L0.8 -0.09 Z"/></svg>
+                  <span>Air traffic</span><input class="switch" type="checkbox" name="layer" value="traffic" checked>
+                </label>
+                <label class="switch-row">
+                  <svg width="18" height="18" aria-hidden="true"><line x1="1" y1="15" x2="17" y2="3" stroke="#13233A" stroke-opacity="0.55" stroke-width="1.5"/></svg>
+                  <span>Airways</span><input class="switch" type="checkbox" name="layer" value="airways" checked>
+                </label>
+                <label class="switch-row">
+                  <svg width="18" height="18" aria-hidden="true"><path d="M9 3 L15 14 L3 14 Z" fill="#FBF4DB" stroke="#13233A" stroke-width="1.5"/></svg>
+                  <span>Waypoints</span><input class="switch" type="checkbox" name="layer" value="waypoints" checked>
+                </label>
+                <label class="switch-row">
+                  <svg width="18" height="18" aria-hidden="true"><rect x="2" y="2" width="14" height="14" rx="3" fill="none" stroke="#13233A" stroke-width="1.5" stroke-dasharray="4 3"/></svg>
+                  <span>FIR boundary</span><input class="switch" type="checkbox" name="layer" value="fir" checked>
+                </label>
+              </fieldset>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map area: the canvas plus the overlays that sit on top of it -->
+      <div class="map-wrap">
+        <!-- Main map canvas: land, FIR, sectors, airways, waypoints and traffic, redrawn every frame -->
+        <canvas id="geo-map" tabindex="0" role="img"
+          aria-label="Map of the Middle East centred on the UAE, with seven sectors, airways, waypoints and moving aircraft. Arrow keys move the map, plus and minus zoom, 0 resets."></canvas>
+
+        <p class="sector-chip overlay" id="sector-chip" hidden></p>
+        <p class="hint overlay" id="hint-3d" hidden>Drag to rotate</p>
+        <!-- Waypoint name label, shown only after a waypoint is clicked -->
+        <div class="map-tip" id="geo-tip" hidden></div>
+
+        <!-- Plane panel: opens when a plane is clicked -->
+        <aside class="plane-panel" id="plane-panel" aria-label="Selected aircraft" aria-hidden="true">
+          <div class="pp-head">
+            <div>
+              <p class="pp-call" id="pp-call">FC000</p>
+              <span class="pp-type" id="pp-type">B77W</span>
+            </div>
+            <button type="button" class="pp-close" id="pp-close" aria-label="Close aircraft details">×</button>
+          </div>
+          <div class="pp-route">
+            <div><b id="pp-from">EGLL</b><span id="pp-from-name">London Heathrow</span></div>
+            <svg viewBox="-1 -1 2 2" aria-hidden="true"><path d="M1 0 L0.8 0.09 L0.2 0.11 L-0.15 0.9 L-0.35 0.9 L-0.2 0.11 L-0.65 0.09 L-0.85 0.42 L-1 0.42 L-0.92 0 L-1 -0.42 L-0.85 -0.42 L-0.65 -0.09 L-0.2 -0.11 L-0.35 -0.9 L-0.15 -0.9 L0.2 -0.11 L0.8 -0.09 Z"/></svg>
+            <div class="to"><b id="pp-to">OMDB</b><span id="pp-to-name">Dubai International</span></div>
+          </div>
+          <div class="pp-progress">
+            <span id="pp-progress-text">Through the FIR: 0%</span>
+            <div class="pp-bar"><i id="pp-bar"></i></div>
+          </div>
+          <dl class="pp-grid">
+            <dt>Altitude</dt>     <dd id="pp-alt">FL350</dd>
+            <dt>Phase</dt>        <dd id="pp-phase">Cruise</dd>
+            <dt>Ground speed</dt> <dd id="pp-gs">450 kt</dd>
+            <dt>Heading</dt>      <dd id="pp-hdg">090°</dd>
+            <dt>Squawk</dt>       <dd id="pp-sqk">0000</dd>
+            <dt>Sector</dt>       <dd id="pp-sector">S1</dd>
+            <dt>Next waypoint</dt><dd id="pp-next">—</dd>
+            <dt>Airway</dt>       <dd id="pp-airway">—</dd>
+          </dl>
+        </aside>
+      </div>
+
+      <!-- Footer: flight level colour key and the simulation speed slider -->
+      <div class="map-foot">
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch" style="background:var(--ok)"></i>Normal</span>
+          <span><i class="swatch" style="background:var(--busy)"></i>Busy</span>
+          <span><i class="swatch" style="background:var(--over)"></i>Overloaded</span>
+          <span class="alt-key"><b>Flight level</b>
+            <span class="alt-scale"><i class="alt-bar" id="alt-bar"></i><span class="alt-ticks" id="alt-ticks"></span></span>
+          </span>
+        </div>
+        <div class="speed">
+          <label for="sim-speed">Speed</label>
+          <!-- positions 0..5 map to Paused, 0.25x, 0.5x, 1x, 2x, 4x (see SPEEDS in the script) -->
+          <input type="range" id="sim-speed" min="0" max="5" step="1" value="3" aria-valuetext="1×">
+          <output id="sim-speed-out" for="sim-speed">1×</output>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Opening air show: drawn over the page, clicks pass through it -->
+  <canvas id="show" aria-hidden="true"></canvas>
+  <button type="button" class="skip-show" id="skip-show">Skip intro</button>
+
+  <!-- =========================================================
+       JAVASCRIPT
+       ========================================================= -->
+
+  <!-- Scripts, loaded at the end so the HTML above exists when they run.
+       Order matters: data files first, then the code that uses them. -->
+  <script src="data/airspace.js"></script>
+  <script src="data/land-region.js"></script>
+  <script src="js/map/map.js"></script>
+  <script src="js/map/radar-background.js"></script>
+  <script src="js/shared/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,787 @@
+/* =====================================================================
+   FIRCast · home.css
+   Styles for index.html only (load after base.css):
+     - the fixed background story canvas and frosted "glass" panels
+     - the hero card (word reveal, flight path, tilt and spotlight)
+     - the live map card (map/table switch, sector table, legend, speed)
+     - section 2 (the scale), section 3 (the problem timeline),
+       section 4 (the tagline and runway)
+     - phone sizes and the "reduce motion" setting
+   Animations are mostly CSS transitions/keyframes that JavaScript turns
+   on by adding a class (for example .is-tilting, .on, .lit).
+   ===================================================================== */
+
+/* ---- Background story scene (fixed, behind everything) ---- */
+#scene {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  display: block;
+}
+
+/* ---- Frosted glass panels: text stays readable over the scene ---- */
+.glass {
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 32px;
+  /* Depth: a light top edge plus two soft navy shadows (one wide, one
+     close) make the panel look lifted off the moving background. */
+  box-shadow: var(--lift);
+}
+.glass-blue { background: rgba(132, 180, 230, 0.86); }   /* Powder Blue */
+.glass-corn { background: rgba(251, 244, 219, 0.90); }   /* Sweet Corn */
+
+/* ---- Hero layout ---- */
+.hero {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 96px 16px 32px;
+}
+/* The hero card: centred text, inside a frosted blue glass panel. */
+.hero-copy {
+  max-width: 760px;
+  padding: 40px;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+  text-align: center;
+}
+/* Main headline: Bricolage, very large, tight letter spacing. */
+h1 {
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-opsz);
+  font-size: 60px; line-height: 60px; font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--ink);
+}
+/* ================= Hero card effects ================= */
+.hero-copy {
+  position: relative;
+  isolation: isolate;                  /* keeps the spotlight layer inside the card */
+  overflow: hidden;                    /* the plane flies in and out of the edges */
+  transition: transform 600ms var(--ease);
+}
+
+/* 1. Words rise in one after another (--i is set per word by JavaScript) */
+.w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.45em);
+  animation: wordIn 700ms var(--ease) forwards;
+  animation-delay: calc(100ms + var(--i) * 80ms);
+}
+@keyframes wordIn { to { opacity: 1; transform: none; } }
+
+/* 2. Highlighter: a cream band grows behind "before they happen."
+      box-decoration-break makes it work if the phrase wraps onto two lines */
+.hl {
+  padding: 0 0.08em;
+  background-image: linear-gradient(transparent 55%, var(--sweet-corn) 55%, var(--sweet-corn) 92%, transparent 92%);
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+  animation: highlight 900ms var(--ease) 1050ms forwards;
+}
+@keyframes highlight { to { background-size: 100% 100%; } }
+
+/* 3. Plane flying a dotted track (path set by JavaScript) */
+.flight {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.flight path { fill: none; }
+.flight-track { stroke: rgba(19, 35, 58, 0.16); stroke-width: 2; stroke-dasharray: 4 7; }
+.flight-trail { stroke: rgba(19, 35, 58, 0.6);  stroke-width: 2; stroke-dasharray: 4 7; }
+/* the mask reveals the darker trail behind the plane, then fades it */
+.flight-reveal {
+  stroke: #fff; stroke-width: 8;
+  stroke-dasharray: 1 1; stroke-dashoffset: 1;
+  animation: trail 12s linear 1.6s infinite;   /* linear: must keep pace with the plane */
+}
+@keyframes trail {
+  0%       { stroke-dashoffset: 1; opacity: 1; }
+  40%      { stroke-dashoffset: 0; }
+  80%      { stroke-dashoffset: 0; opacity: 1; }
+  95%, 100% { stroke-dashoffset: 0; opacity: 0; }
+}
+/* The little plane that flies along the curved path (CSS offset-path), */
+/* and the trail it leaves (an SVG line revealed by a mask). */
+.flight-plane {
+  position: absolute; left: 0; top: 0;
+  width: 18px; height: 18px;
+  color: var(--ink);
+  offset-rotate: auto;                 /* nose follows the curve */
+  offset-distance: 0%;
+  opacity: 0;
+  animation: fly 12s linear 1.6s infinite;
+  pointer-events: none;
+}
+.flight-plane svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+@keyframes fly {
+  0%        { offset-distance: 0%; opacity: 1; }
+  40%       { offset-distance: 100%; opacity: 1; }
+  40.1%, 100% { offset-distance: 100%; opacity: 0; }
+}
+
+/* 4. Radar corner brackets slide in from outside */
+.corner {
+  position: absolute;
+  width: 18px; height: 18px;
+  border: 0 solid rgba(19, 35, 58, 0.55);
+  animation: cornerIn 700ms var(--ease) 300ms both;
+  pointer-events: none;
+}
+.corner.tl { top: 14px; left: 14px;   border-top-width: 2px; border-left-width: 2px;   border-top-left-radius: 6px;     --dx: -10px; --dy: -10px; }
+.corner.tr { top: 14px; right: 14px;  border-top-width: 2px; border-right-width: 2px;  border-top-right-radius: 6px;    --dx: 10px;  --dy: -10px; }
+.corner.bl { bottom: 14px; left: 14px;  border-bottom-width: 2px; border-left-width: 2px;  border-bottom-left-radius: 6px;  --dx: -10px; --dy: 10px; }
+.corner.br { bottom: 14px; right: 14px; border-bottom-width: 2px; border-right-width: 2px; border-bottom-right-radius: 6px; --dx: 10px;  --dy: 10px; }
+@keyframes cornerIn { from { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+
+/* 5. Spotlight that follows the mouse (position set by JavaScript) */
+.hero-copy::after {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: -1;                         /* above the glass, below the text */
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.3), transparent 60%);
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+}
+.hero-copy.is-tilting { transition: transform 150ms var(--ease); }
+.hero-copy.is-tilting::after { opacity: 1; }
+
+/* 6. Button shine: a light streak sweeps across on hover */
+.btn-shine { position: relative; overflow: hidden; isolation: isolate; }
+.btn-shine::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; left: 0;
+  width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-160%) skewX(-20deg);
+  pointer-events: none;
+}
+/* an even curve (not the page's fast-start one) so the streak is visible as it crosses */
+.btn-shine:hover::after { animation: shine 900ms cubic-bezier(0.45, 0, 0.2, 1); }
+@keyframes shine { to { transform: translateX(340%) skewX(-20deg); } }
+
+/* The sentence under the headline. */
+.sub {
+  max-width: 560px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-optical-sizing: auto;            /* uses Bricolage's reading-size letter shapes */
+  font-size: 20px; line-height: 30px;
+  text-wrap: pretty;
+}
+
+/* ---- Airspace map ---- */
+.stage {
+  width: 100%; max-width: 1100px;
+  margin-top: 48px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+/* Sweet Corn card that holds the map, like the cream panel in the poster */
+.map-card {
+  position: relative;
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: var(--lift);             /* same depth as the glass panels */
+  padding: 24px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+/* ---- Map card edge glow: the border lights up nearest the mouse ----
+   A 3px ring is cut out of a radial gradient with two masks:
+   full box minus the content box leaves only the border area. */
+.map-card::before {
+  content: "";
+  position: absolute; inset: 0;
+  padding: 3px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(240px circle at var(--gx, 50%) var(--gy, 50%), var(--powder-blue), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;               /* Safari */
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;                   /* Chrome, Firefox */
+  opacity: 0;
+  transition: opacity 300ms var(--ease);
+}
+.map-card.is-glowing::before { opacity: 1; }
+
+/* ---- Map card header ---- */
+/* three columns: title | Map/Table switch, always centred | clock */
+.map-head {
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+}
+.map-head .clock-group { justify-self: end; }
+/* narrow: title left and clock right on top, Map/Table switch centred below */
+@media (max-width: 520px) {
+  .map-head { grid-template-columns: 1fr auto; grid-template-areas: "title clock" "tabs tabs"; }
+  .map-head .map-title { grid-area: title; }
+  .map-head .clock-group { grid-area: clock; }
+  .map-head .tabs { grid-area: tabs; justify-self: center; }
+}
+/* "Emirates FIR" title with its live dot. */
+.map-title {
+  display: inline-flex; align-items: center; gap: 8px;
+  color: var(--ink);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+}
+/* clock pill: the time, then a small UTC / Local dropdown inside the same pill */
+.clock-group {
+  display: inline-flex; align-items: center;
+  border-radius: 8px;
+  background: rgba(19, 35, 58, 0.08);
+  color: var(--ink);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+}
+.utc { padding: 4px 8px 4px 10px; font-variant-numeric: tabular-nums; }   /* Manrope digits: equal width, no jitter */
+.zone { position: relative; display: inline-flex; border-left: 1px solid rgba(19, 35, 58, 0.15); }
+.zone select {
+  -webkit-appearance: none; appearance: none;
+  border: 0; background: transparent; color: inherit; font: inherit;
+  padding: 4px 26px 4px 10px; border-radius: 0 8px 8px 0;
+  cursor: pointer;
+  transition: background-color 300ms var(--ease);
+}
+.zone select:hover { background: rgba(19, 35, 58, 0.08); }
+.zone select:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.zone::after {                                   /* chevron */
+  content: ""; position: absolute; right: 11px; top: 50%;
+  width: 6px; height: 6px; margin-top: -5px;
+  border-right: 2px solid var(--ink); border-bottom: 2px solid var(--ink);
+  transform: rotate(45deg); pointer-events: none;
+}
+
+/* ---- Map / Table switch ---- */
+.tabs {
+  display: inline-flex; gap: 4px; padding: 4px;
+  border-radius: 9999px;
+  background: rgba(19, 35, 58, 0.08);
+}
+/* Each tab button; the selected one is navy with cream text. */
+.tabs button {
+  border: 0; background: transparent; cursor: pointer;
+  padding: 4px 16px; border-radius: 9999px;
+  color: var(--muted);
+  font: 600 14px/20px var(--font-ui);
+  transition: background-color 300ms var(--ease), color 300ms var(--ease);
+}
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--sweet-corn); }
+.tabs button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* ---- Map view and hover tooltip ---- */
+.map-panel { position: relative; }
+.map-tip {
+  position: absolute; left: 0; top: 0;
+  transform: translate(-50%, calc(-100% - 14px));   /* sits just above the pointer */
+  pointer-events: none;
+  padding: 4px 10px; border-radius: 8px;
+  background: var(--ink); color: var(--sweet-corn);
+  font-size: 12px; line-height: 18px; font-weight: 500;
+  white-space: nowrap;
+  box-shadow: var(--lift-small);
+  font-variant-numeric: tabular-nums;
+}
+.map-tip b { font-weight: 700; }
+
+/* ---- Table view: a plain ruled table (no boxes) ---- */
+.table-panel { overflow-x: auto; }
+.sector-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: var(--ink);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+  text-align: left;
+}
+.sector-table th, .sector-table td { padding: 12px; vertical-align: middle; }
+.sector-table thead th { padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.sector-table tbody th, .sector-table tbody td { border-bottom: 1px solid rgba(19, 35, 58, 0.12); }
+.sector-table tbody tr:last-child th, .sector-table tbody tr:last-child td { border-bottom: 0; }
+
+/* column headings: the display font, sentence case, sortable */
+.sector-table thead button {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  color: inherit;
+  font-family: var(--font-display); font-variation-settings: var(--display-opsz);
+  font-size: 17px; line-height: 22px; font-weight: 700; letter-spacing: -0.01em;
+}
+.sector-table thead button::after { content: "↕"; font-family: var(--font-ui); font-size: 12px; opacity: 0.3; }
+.sector-table th[aria-sort="ascending"] button::after  { content: "↑"; opacity: 1; }
+.sector-table th[aria-sort="descending"] button::after { content: "↓"; opacity: 1; }
+.sector-table thead button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+
+.sector-table tbody tr { transition: background-color 300ms var(--ease); }
+.sector-table tbody tr:hover { background: rgba(132, 180, 230, 0.18); }
+.sector-table tbody tr.is-over { background: rgba(221, 17, 10, 0.06); }   /* only overloaded rows get a wash */
+
+/* sector name, with its altitude band underneath */
+.sector-table .sid {
+  font-family: var(--font-display); font-variation-settings: var(--display-opsz);
+  font-size: 22px; line-height: 24px; font-weight: 800;
+}
+.sector-table .sid small { display: block; font: 600 11px/16px var(--font-ui); color: var(--muted); }
+
+/* aircraft: one plane per aircraft, coloured by the sector's status; faint planes = room left */
+.planes { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.planes svg { width: 18px; height: 18px; overflow: visible; }
+.planes path { stroke: rgba(19, 35, 58, 0.55); stroke-width: 0.07; stroke-linejoin: round; transition: fill 500ms var(--ease); }
+.planes .lvl-0 path { fill: var(--ok); }
+.planes .lvl-1 path { fill: var(--busy); }
+.planes .lvl-2 path { fill: var(--over); stroke: none; }
+.planes .room path { fill: rgba(19, 35, 58, 0.1); stroke: none; }
+.planes .new { animation: planeIn 600ms var(--ease); }
+@keyframes planeIn { from { opacity: 0; transform: translateY(6px) scale(0.6); } }
+
+/* status in words: grey, a butter-yellow marker (like "calm."), or red capitals */
+.status-0 { color: var(--muted); }
+.status-1 { font-weight: 700; background: linear-gradient(transparent 55%, var(--busy) 55%, var(--busy) 92%, transparent 92%); }
+.status-2 { color: var(--spicy-orange); font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.trend { white-space: nowrap; color: var(--muted); }
+.trend b { margin-left: 4px; color: var(--ink); }
+.trend-up b { color: var(--spicy-orange); }
+
+/* ---- Map card footer: legend + speed slider ---- */
+/* wide: legend | speed | button on one row.
+   medium: legend and speed on top (speed kept right), button centred below.
+   narrow: legend, then speed on the right, then the button centred. */
+.map-foot {
+  display: grid; align-items: center; gap: 12px 24px;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "legend speed button";
+}
+.map-foot .legend { grid-area: legend; justify-content: flex-start; }
+.map-foot .speed { grid-area: speed; justify-self: center; }
+.map-foot .btn-map { grid-area: button; justify-self: end; }
+@media (max-width: 900px) {
+  .map-foot { grid-template-columns: 1fr auto; grid-template-areas: "legend speed" "button button"; }
+  .map-foot .speed { justify-self: end; }
+  .map-foot .btn-map { justify-self: center; }
+}
+/* legend and speed shrink together (same --u ratio) so they stay side by side */
+.map-foot { --u: 1; }
+@media (max-width: 760px) { .map-foot { --u: 0.9; } }
+@media (max-width: 620px) { .map-foot { --u: 0.8; } }
+/* phones: no room side by side, so everything is stacked and centred */
+@media (max-width: 540px) {
+  .map-foot { --u: 0.9; grid-template-columns: 1fr; grid-template-areas: "legend" "speed" "button"; }
+  .map-foot .legend, .map-foot .speed { justify-self: center; justify-content: center; }
+}
+.btn-map svg { transition: transform 300ms var(--ease); }
+.btn-map:hover svg { transform: translateX(2px); }
+/* Speed slider row: label, slider, value pill. */
+.speed {
+  display: inline-flex; align-items: center; gap: calc(12px * var(--u, 1));
+  color: var(--ink);
+  font-size: calc(14px * var(--u, 1)); line-height: 20px; font-weight: 600;
+}
+/* Pill showing the speed ("1x", "Paused"); fixed width so the slider does not shift. */
+.speed output {
+  min-width: calc(64px * var(--u, 1));   /* room for "Paused" so the slider doesn't shift */
+  padding: 2px calc(10px * var(--u, 1)); border-radius: 9999px;
+  background: var(--ink); color: var(--sweet-corn);
+  text-align: center; font-variant-numeric: tabular-nums;
+}
+
+/* custom slider: a thin navy track and a round navy handle */
+.speed input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: calc(160px * var(--u, 1)); height: 24px;
+  background: transparent; cursor: pointer;
+}
+/* Slider track (Chrome/Safari, then Firefox). */
+.speed input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 9999px; background: rgba(19, 35, 58, 0.16);
+}
+.speed input[type="range"]::-moz-range-track {
+  height: 6px; border-radius: 9999px; background: rgba(19, 35, 58, 0.16);
+}
+/* Slider handle (Chrome/Safari, then Firefox): a navy dot with a cream ring. */
+.speed input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 20px; height: 20px; margin-top: -7px;   /* centre the handle on the track */
+  border-radius: 50%; border: 3px solid var(--sweet-corn);
+  background: var(--ink);
+  box-shadow: var(--lift-small);
+  transition: transform 300ms var(--ease);
+}
+.speed input[type="range"]::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%; border: 3px solid var(--sweet-corn);
+  background: var(--ink);
+  transition: transform 300ms var(--ease);
+}
+.speed input[type="range"]:hover::-webkit-slider-thumb  { transform: scale(1.15); }
+.speed input[type="range"]:active::-webkit-slider-thumb { transform: scale(0.95); }
+.speed input[type="range"]:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; border-radius: 9999px; }
+
+/* The map canvas keeps the map's shape (aspect-ratio) and never gets taller than 56% of the screen. */
+#airspace {
+  display: block;
+  width: 100%;
+  aspect-ratio: 930 / 510;   /* same shape as the map, so no empty space */
+  max-height: 56vh;
+}
+.legend {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px calc(24px * var(--u, 1));
+  color: var(--ink);
+  font-size: calc(12px * var(--u, 1)); line-height: 16px; font-weight: 500;
+}
+.legend span { display: inline-flex; align-items: center; gap: calc(8px * var(--u, 1)); }
+.swatch { width: calc(12px * var(--u, 1)); height: calc(12px * var(--u, 1)); border-radius: 4px; }
+/* Small grey caption text. */
+.caption {
+  text-align: center; color: var(--muted);
+  font-size: 12px; line-height: 16px; font-weight: 400;
+  text-wrap: balance;
+}
+
+/* ---- Scroll cue ---- */
+.cue {
+  margin-top: 24px;
+  display: inline-flex; flex-direction: column; align-items: center; gap: 4px;
+  background: none; border: 0; cursor: pointer;
+  color: var(--muted);
+  font: 500 12px/16px 'Manrope', system-ui, sans-serif;
+  border-radius: 8px;
+}
+.cue svg { animation: bob 1600ms var(--ease) infinite alternate; }
+@keyframes bob { to { transform: translateY(4px); } }
+
+/* ---- Entrance animation: fade in and rise 32px, one after another ---- */
+.reveal { opacity: 0; transform: translateY(32px); animation: rise 800ms var(--ease) forwards; }
+.d1 { animation-delay: 80ms; }
+.d2 { animation-delay: 160ms; }
+.d3 { animation-delay: 240ms; }
+.d4 { animation-delay: 400ms; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+
+/* ---- Scroll reveal: elements rise 32px and fade in once ---- */
+.on-scroll {
+  opacity: 0; transform: translateY(32px);
+  transition: opacity 700ms var(--ease), transform 700ms var(--ease);
+  transition-delay: var(--delay, 0ms);
+}
+.on-scroll.is-visible { opacity: 1; transform: none; }
+
+/* ================= Section 2: the scale ================= */
+.scale {
+  padding: 96px 16px;
+  display: flex; justify-content: center;
+}
+/* Section 2's cream glass panel. */
+.scale-panel {
+  width: 100%; max-width: 960px;
+  padding: 48px 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 48px;
+  text-align: center;
+}
+/* Small label above a big heading. */
+.eyebrow {
+  color: var(--muted);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+}
+.scale h2 { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+/* The 1,000,000+ figure: display font, very large, orange. */
+.big-number {
+  color: var(--spicy-orange);          /* 4.6 contrast on Sweet Corn */
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-opsz);
+  font-size: 128px; line-height: 1; font-weight: 800;
+  letter-spacing: -0.03em;
+}
+/* The display font's digits have different widths, so while counting each digit
+   sits in a box of equal width (--dw is measured in JavaScript). */
+.big-number .dg { display: inline-block; width: var(--dw, 0.62em); text-align: center; }
+.big-label {
+  max-width: 680px;
+  color: var(--ink);
+  font-size: 24px; line-height: 32px; font-weight: 500;
+  text-wrap: balance;
+}
+
+/* The two fact tiles under the big number, side by side. */
+.tiles {
+  width: 100%; max-width: 880px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+/* One fact tile. */
+.tile {
+  background: var(--powder-blue);
+  border-radius: 24px;
+  box-shadow: var(--lift-small);
+  padding: 32px 24px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+/* Big value inside a tile ("+10.3%", "≈ 32 s"). */
+.tile-value {
+  display: flex; align-items: center; gap: 12px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-opsz);
+  font-size: 48px; line-height: 1; font-weight: 800;
+  letter-spacing: -0.02em;
+}
+/* Explanation under a tile value. */
+.tile-label {
+  color: var(--muted);
+  font-size: 16px; line-height: 24px; font-weight: 500;
+}
+
+/* Ring that fills once every ~32 seconds (one movement) */
+.ring { flex-shrink: 0; transform: rotate(-90deg); }
+.ring-track { stroke: var(--sweet-corn); }
+.ring-fill {
+  stroke: var(--ink);
+  stroke-dasharray: 100.53;            /* circumference of r = 16 */
+  stroke-dashoffset: 100.53;
+  /* filled by the script, in step with the live count below */
+}
+.since-n { display: inline-block; font-weight: 800; font-variant-numeric: tabular-nums; }
+.since-n.bump { animation: bump 600ms var(--ease); }
+@keyframes bump { 40% { transform: scale(1.5); color: var(--spicy-orange); } }
+.live-row { display: inline-flex; align-items: center; gap: 8px; }
+.since-next { display: block; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Live line under the 32 s tile: dot + count, then the countdown underneath. */
+.live {
+  margin-top: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--ink);
+  font-size: 14px; line-height: 20px; font-weight: 600;
+}
+/* Small orange dot that pulses (the ripple is the ::after ring growing and fading). */
+.live-dot {
+  width: 8px; height: 8px; border-radius: 9999px;
+  background: var(--spicy-orange);
+  animation: pulse 1600ms var(--ease) infinite;
+}
+@keyframes pulse { 50% { transform: scale(1.6); opacity: 0.4; } }
+
+
+/* ================= Section 3: the problem (scroll story) ================= */
+/* The section is tall; its inner panel "sticks" to the screen while
+   you scroll through it, and scroll position drives the timeline. */
+.problem {
+  position: relative;
+  height: 300vh;
+}
+/* Section 3 is tall; this inner box sticks to the screen while you scroll through it. */
+.problem-sticky {
+  position: sticky; top: 0;
+  height: 100vh; height: 100svh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 88px 16px 24px;            /* 88px top clears the floating nav */
+  text-align: center;
+}
+.problem-panel {
+  width: 100%; max-width: 960px;
+  padding: 32px;
+  display: flex; flex-direction: column; align-items: center; gap: 24px;
+}
+/* Wide screens: pin the panel to the right so the left side becomes
+   a stage where the background story (overload, then split) plays out. */
+@media (min-width: 1100px) {
+  .problem-sticky { align-items: flex-end; padding-right: max(32px, 3vw); }
+  .problem-panel { max-width: 800px; }
+}
+/* Section 3 heading. */
+.problem h2 {
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-opsz);
+  font-size: 48px; line-height: 48px; font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+/* Section 3 intro sentence. */
+.lead {
+  max-width: 560px;
+  color: var(--muted);
+  font-size: 18px; line-height: 28px; font-weight: 400;
+  text-wrap: pretty;
+}
+/* The three story steps (dot + text) under the heading. */
+.steps {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  min-height: 96px;                    /* stops the layout jumping when text changes */
+}
+.step-dots { display: flex; gap: 8px; }
+.step-dots i {
+  width: 24px; height: 4px; border-radius: 9999px;
+  background: rgba(19, 35, 58, 0.2);
+  transition: background-color 300ms var(--ease);
+}
+.step-dots i.on { background: var(--ink); }
+/* Step text: faint until its step is active. */
+.step-text {
+  max-width: 560px;
+  color: var(--ink);
+  font-size: 18px; line-height: 28px; font-weight: 500;
+  text-wrap: balance;
+}
+.step-text b { font-weight: 700; }
+.step-text.swap { animation: stepIn 400ms var(--ease); }
+@keyframes stepIn { from { opacity: 0; transform: translateY(8px); } }
+
+/* Card holding the timeline chart. */
+.chart-card {
+  width: 100%; max-width: 880px;
+  background: var(--sweet-corn);
+  border-radius: 24px;
+  padding: 16px;
+}
+/* The timeline canvas fills the chart card. */
+#timeline {
+  display: block;
+  width: 100%;
+  height: clamp(200px, 36vh, 340px);
+}
+
+/* ================= Section 4: the tagline (scroll story) ================= */
+/* Tall section with a pinned panel: as you scroll, the words light up one
+   by one, then the runway lights run in and a plane touches down. */
+.tagline { position: relative; height: 240vh; }
+.tagline-sticky {
+  position: sticky; top: 0;
+  height: 100vh; height: 100svh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 88px 16px 24px;
+}
+/* Section 4's cream glass panel holding the tagline and runway. */
+.tagline-panel {
+  width: 100%; max-width: 960px;
+  padding: 56px 32px 24px;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  text-align: center;
+}
+/* The tagline text: display font, very large. */
+.tag {
+  font-family: var(--font-display);
+  font-variation-settings: var(--display-opsz);
+  font-size: 72px; line-height: 76px; font-weight: 800; letter-spacing: -0.025em;
+}
+.tag-line { display: block; }
+/* One tagline word: faint grey until it is lit (.on) by the scroll script. */
+.tw {
+  color: rgba(19, 35, 58, 0.14);
+  transition: color 500ms var(--ease);
+}
+.tw.on { color: var(--ink); }
+/* "calm." gets a powder-blue marker stroke that draws in from the left */
+.tw.calm {
+  background: linear-gradient(var(--powder-blue), var(--powder-blue)) no-repeat 0 88% / 0% 30%;
+  transition: color 500ms var(--ease), background-size 900ms var(--ease) 200ms;
+}
+.tw.calm.on { background-size: 100% 30%; }
+.runway { width: 100%; max-width: 640px; height: auto; overflow: visible; }
+.runway .glow { fill: var(--powder-blue); opacity: 0; transform-box: fill-box; transform-origin: center; transform: scale(0.4); transition: opacity 400ms var(--ease), transform 400ms var(--ease); }
+.runway .bulb { fill: rgba(19, 35, 58, 0.14); transition: fill 300ms var(--ease); }
+.runway .lit .glow { opacity: 0.6; transform: scale(1); }
+.runway .lit .bulb { fill: var(--ink); }
+.runway .centre { stroke: rgba(19, 35, 58, 0.12); stroke-width: 3; stroke-dasharray: 10 9; }
+.runway .plane { fill: var(--ink); stroke: var(--sweet-corn); }
+
+/* ---- Section 4 hover (mouse only): depth, word markers, runway "rabbit" ---- */
+/* The panel stays still; its layers drift at different depths with the
+   mouse, like looking down a runway. Lit words get a marker stroke under
+   the pointer, and the runway lights run a strobe towards the far end. */
+.tag-line, .runway {
+  transition: transform 700ms var(--ease);
+  transform: translate(calc(var(--px, 0) * var(--d) * 1px), calc(var(--py, 0) * var(--d) * 1px));
+}
+.tag-line:nth-child(1) { --d: 5; }
+.tag-line:nth-child(2) { --d: 9; }
+.tag-line:nth-child(3) { --d: 13; }
+.runway { --d: -10; }
+.runway .flash .glow { opacity: 0.95; transform: scale(1.7); transition-duration: 80ms; }
+.runway .flash .bulb { fill: #fff; transition-duration: 80ms; }
+@media (hover: hover) and (pointer: fine) {
+  /* Hovering a lit word draws a blue marker stroke under it (background-size grows). */
+  .tw.on:not(.calm) {
+    background: linear-gradient(rgba(132, 180, 230, 0.75), rgba(132, 180, 230, 0.75)) no-repeat 0 88% / 0% 30%;
+    transition: color 500ms var(--ease), background-size 450ms var(--ease);
+  }
+  .tw.on:not(.calm):hover { background-size: 100% 30%; }
+  .tw.on:hover { cursor: default; }
+}
+@media (max-width: 640px) {
+  .tagline-panel { padding: 40px 16px 16px; border-radius: 24px; }
+  .tag { font-size: 40px; line-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tw, .tw.calm, .runway .glow, .runway .bulb { transition: none; }
+  .tag-line, .runway { transform: none; transition: none; }
+}
+
+
+/* ---- Phone sizes ---- */
+@media (max-width: 640px) {
+  h1 { font-size: 36px; line-height: 40px; }
+  .sub { font-size: 18px; line-height: 28px; }
+  .stage { margin-top: 32px; }
+  .map-card { padding: 12px; border-radius: 16px; }
+  .map-title { font-size: 12px; line-height: 16px; }
+  .clock-group { font-size: 12px; line-height: 16px; }
+  .utc { padding: 4px 6px 4px 8px; }
+  .zone select { padding: 4px 22px 4px 8px; }
+  .zone::after { right: 9px; }
+  .tabs button { padding: 4px 12px; font-size: 12px; line-height: 16px; }
+  .sector-table { font-size: 13px; }
+  .sector-table th, .sector-table td { padding: 8px 6px; }
+  .planes { gap: 1px; flex-wrap: nowrap; }
+  .planes svg { width: 10px; height: 10px; }
+  .sector-table .sid { font-size: 18px; }
+  .sector-table .sid small { display: none; }        /* phones: no room for the altitude band */
+  .sector-table thead button { font-size: 14px; gap: 3px; }
+  .sector-table thead button::after { font-size: 10px; }
+  .sector-table th, .sector-table td { padding: 8px 4px; }
+  .trend-word {                       /* phones: arrow only, word kept for screen readers */
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip: rect(0 0 0 0); white-space: nowrap;
+  }
+  .scale { padding: 96px 16px 64px; } /* 96px top clears the floating nav */
+  .scale-panel { padding: 32px 16px; gap: 32px; }
+  .glass { border-radius: 24px; }
+  .hero-copy { padding: 36px 16px 28px; }   /* extra top room for the plane's track */
+  .big-number { font-size: 60px; }
+  .big-label { font-size: 18px; line-height: 28px; }
+  .tiles { grid-template-columns: 1fr; }
+  .tile-value { font-size: 36px; }
+  .problem { height: 260vh; }
+  .problem-panel { gap: 16px; padding: 20px 12px; }
+  .problem h2 { font-size: 36px; line-height: 40px; }
+  .lead { font-size: 16px; line-height: 24px; }
+  .step-text { font-size: 16px; line-height: 24px; }
+  .steps { min-height: 88px; }
+  .chart-card { padding: 8px; border-radius: 16px; }
+  #timeline { height: 200px; }
+}
+
+/* ---- Respect "reduce motion" system setting ---- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { transform: none; animation: fadeOnly 300ms var(--ease) forwards; }
+  .cue svg { animation: none; }
+  .on-scroll { transform: none; transition: opacity 300ms var(--ease); }
+  .ring-fill { stroke-dashoffset: 0; }
+  .since-n.bump { animation: none; }
+  .live-dot { animation: none; }
+  .step-text.swap { animation: none; }
+  .w { transform: none; animation: fadeOnly 300ms var(--ease) forwards; }
+  .hl { animation: none; background-size: 100% 100%; }
+  .corner { animation: none; }
+  .flight-plane { display: none; }
+  .flight-reveal { animation: none; stroke-dashoffset: 0; }
+  .btn-shine:hover::after { animation: none; }
+  @keyframes fadeOnly { to { opacity: 1; } }
+}

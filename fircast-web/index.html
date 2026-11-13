@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FIRCast</title>
+  <meta name="description" content="FIRCast forecasts air traffic control sector workload across UAE airspace, 30 to 60 minutes ahead.">
+  <link rel="icon" type="image/png" href="assets/images/favicon.png">
+
+  <!-- Fonts: Bricolage Grotesque for headlines and big numbers, Manrope for everything else -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200..800&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Styles: shared base first, then this page's own file -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/home.css">
+</head>
+
+<body>
+  <!-- Skip link: hidden until a keyboard user presses Tab, then jumps straight to the content -->
+  <a class="skip" href="#main">Skip to content</a>
+
+  <!-- Background story scene: one fixed canvas behind the whole page -->
+  <canvas id="scene" aria-hidden="true"></canvas>
+
+  <!-- =========================================================
+       Navigation bar. aria-current="page" marks where we are, which
+       base.css turns into the navy pill. nav.js shrinks it on scroll.
+       ========================================================= -->
+  <nav class="nav" aria-label="Main">
+    <a class="brand" href="#top" aria-label="FIRCast home" aria-current="page">
+      <img class="brand-logo" src="assets/images/logo.png" width="39" height="32" alt="">
+      <span class="brand-name">FIRCast</span>
+    </a>
+    <!-- Page links on the right of the bar -->
+    <div class="nav-links">
+      <a class="nav-link" href="map.html">Map</a>
+    </div>
+  </nav>
+
+  <!-- All page content. The id is the target of the skip link above -->
+  <main id="main">
+    <!-- ================= Section 1: the hero ================= -->
+    <!-- data-theme picks the nav colours for this section; data-story tells story-scene.js -->
+    <!-- which part of the background animation (scene 0 to 1) plays while it is on screen -->
+    <section class="hero" id="top" aria-labelledby="hero-title" data-theme="blue" data-story="0 1">
+      <!-- Hero card: frosted glass panel with the headline. hero-card.js tilts it toward the mouse -->
+      <div class="hero-copy glass glass-blue" id="hero-card">
+        <!-- Decoration: radar-style corner brackets -->
+        <span class="corner tl" aria-hidden="true"></span>
+        <span class="corner tr" aria-hidden="true"></span>
+        <span class="corner bl" aria-hidden="true"></span>
+        <span class="corner br" aria-hidden="true"></span>
+
+        <!-- Decoration: a plane flying a dotted track along the top of the card.
+             The path shape is set by JavaScript to fit the card's width. -->
+        <svg class="flight" aria-hidden="true">
+          <defs>
+            <mask id="trail-mask"><path class="flight-reveal" pathLength="1"></path></mask>
+          </defs>
+          <path class="flight-track"></path>
+          <path class="flight-trail" mask="url(#trail-mask)"></path>
+        </svg>
+        <span class="flight-plane" aria-hidden="true">
+          <svg viewBox="-1 -1 2 2"><path d="M1 0 L0.8 0.09 L0.2 0.11 L-0.15 0.9 L-0.35 0.9 L-0.2 0.11 L-0.65 0.09 L-0.85 0.42 L-1 0.42 L-0.92 0 L-1 -0.42 L-0.85 -0.42 L-0.65 -0.09 L-0.2 -0.11 L-0.35 -0.9 L-0.15 -0.9 L0.2 -0.11 L0.8 -0.09 Z"/></svg>
+        </span>
+
+        <!-- Each word is wrapped in a <span> by JavaScript so it can rise in on its own -->
+        <h1 id="hero-title"><span class="line">See busy skies</span><br><span class="hl">before they happen.</span></h1>
+        <!-- Sub-heading. The .reveal class fades it in; animation-delay staggers it after the headline -->
+        <p class="sub reveal" style="animation-delay: 650ms">
+          FIRCast forecasts how busy each air traffic control sector
+          in UAE airspace will be, 30 to 60 minutes ahead.
+        </p>
+      </div>
+
+      <!-- Right-hand side of the hero: the live airspace card (drawn by hero-map.js) -->
+      <div class="stage reveal" style="animation-delay: 900ms">
+        <div class="map-card">
+          <!-- Card header: title, Map / Table switch, live UTC clock -->
+          <div class="map-head">
+            <p class="map-title"><i class="live-dot" aria-hidden="true"></i>Emirates FIR</p>
+            <!-- Map / Table switch. role=tab + aria-selected let screen readers announce the active view -->
+            <div class="tabs" role="tablist" aria-label="Choose a view">
+              <button type="button" role="tab" id="tab-map" aria-selected="true" aria-controls="panel-map">Map</button>
+              <button type="button" role="tab" id="tab-table" aria-selected="false" aria-controls="panel-table" tabindex="-1">Table</button>
+            </div>
+            <!-- Live clock with a UTC / Local dropdown, updated every second by a timer -->
+            <div class="clock-group">
+              <time class="utc" id="utc-clock">--:--:--</time>
+              <span class="zone">
+                <label class="sr-only" for="time-zone">Time shown in</label>
+                <select id="time-zone">
+                  <option value="utc">UTC</option>
+                  <option value="local">Local</option>
+                </select>
+              </span>
+            </div>
+          </div>
+
+          <!-- View 1: the map -->
+          <div class="map-panel" id="panel-map" role="tabpanel" aria-labelledby="tab-map">
+            <!-- The map itself: sectors, routes and moving aircraft are painted here every frame -->
+            <canvas id="airspace" role="img"
+              aria-label="Animated map of airspace sectors. Aircraft move along routes and each sector changes colour from blue to light orange to deep orange as it gets busier. Hover a sector for details."></canvas>
+            <!-- Small tooltip that follows the pointer over a sector (hidden until needed) -->
+            <div class="map-tip" id="map-tip" hidden></div>
+          </div>
+
+          <!-- View 2: the same sectors as a live table (click a column to sort) -->
+          <div class="table-panel" id="panel-table" role="tabpanel" aria-labelledby="tab-table" hidden>
+            <!-- Rows are rebuilt by hero-map.js from the same simulated traffic as the map -->
+            <table class="sector-table">
+              <caption class="sr-only">Live status of each sector. Select a column heading to sort.</caption>
+              <thead>
+                <tr>
+                  <th scope="col"><button type="button" data-sort="id">Sector</button></th>
+                  <th scope="col" aria-sort="descending"><button type="button" data-sort="count">Aircraft now</button></th>
+                  <th scope="col"><button type="button" data-sort="level">Status</button></th>
+                  <th scope="col"><button type="button" data-sort="trend">Change</button></th>
+                </tr>
+              </thead>
+              <tbody id="sector-rows"></tbody>
+            </table>
+          </div>
+
+          <!-- Card footer: colour legend and simulation speed slider -->
+          <div class="map-foot">
+            <!-- Colour key: Calm / Busy / Overloaded, using the same colours as the sectors -->
+            <div class="legend" aria-hidden="true">
+              <span><i class="swatch" style="background:var(--ok)"></i>Normal</span>
+              <span><i class="swatch" style="background:var(--busy)"></i>Busy</span>
+              <span><i class="swatch" style="background:var(--over)"></i>Overloaded</span>
+            </div>
+            <!-- Simulation speed slider (a range input) -->
+            <div class="speed">
+              <label for="sim-speed">Speed</label>
+              <!-- positions 0..5 map to Paused, 0.25x, 0.5x, 1x, 2x, 4x (see SPEEDS in the script) -->
+              <input type="range" id="sim-speed" min="0" max="5" step="1" value="3" aria-valuetext="1×">
+              <output id="sim-speed-out" for="sim-speed">1×</output>
+            </div>
+            <a class="btn btn-sm btn-map" href="map.html">
+              See the full map
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- "Scroll" cue at the bottom of the hero; clicking it scrolls to section 2 -->
+      <button class="cue" type="button" id="cue" aria-label="Scroll to next section">
+        Scroll
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </section>
+
+    <!-- ================= Section 2: the scale ================= -->
+    <section class="scale" id="next" aria-labelledby="scale-title" data-theme="corn" data-story="1 2">
+      <!-- Corn-coloured glass panel. Elements with .on-scroll fade up when they enter the screen (scale.js) -->
+      <div class="scale-panel glass glass-corn">
+      <p class="eyebrow on-scroll">UAE airspace, 2024</p>
+
+      <h2 id="scale-title" class="on-scroll" style="--delay: 80ms">
+        <span class="sr-only">Over 1,000,000</span>
+        <span class="big-number" id="moves" aria-hidden="true">1,000,000+</span>
+        <span class="big-label">air traffic movements handled by the Sheikh&nbsp;Zayed Air&nbsp;Navigation&nbsp;Centre in one year.</span>
+      </h2>
+
+      <!-- Four number tiles. --delay staggers their entrance; the numbers count up in scale.js -->
+      <div class="tiles">
+        <div class="tile on-scroll" style="--delay: 160ms">
+          <p class="tile-value">+10.3%</p>
+          <p class="tile-label">more traffic than in 2023</p>
+        </div>
+
+        <div class="tile on-scroll" style="--delay: 240ms">
+          <p class="tile-value">
+            <svg class="ring" width="40" height="40" viewBox="0 0 40 40" aria-hidden="true">
+              <circle class="ring-track" cx="20" cy="20" r="16" fill="none" stroke-width="4"/>
+              <circle class="ring-fill" cx="20" cy="20" r="16" fill="none" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+            ≈ 32 s
+          </p>
+          <p class="tile-label">between one flight and the next, on average</p>
+          <p class="live"><span class="live-row"><i class="live-dot" aria-hidden="true"></i><span>Flights handled since you opened this page: <b class="since-n" id="since">0</b></span></span><span class="since-next" id="since-next">Next one in 32 s</span></p>
+        </div>
+      </div>
+
+      <!-- Sources (not shown on the page):
+           1,000,000+ movements in 2024: GCAA via WAM, 6 Jan 2025
+             https://www.wam.ae/en/article/15csky7-uae-sets-historic-record-aviation-sector-with-over
+           +10.3% growth on 2023: GCAA data reported by Gulf News, Jan 2025
+             https://gulfnews.com/business/aviation/uae-records-over-1-million-air-movements-in-2024-gcaa-1.500011290
+           "≈ 32 s" and the live count are our own estimate: 366 days / 1,000,000 movements -->
+      </div>
+    </section>
+
+    <!-- ================= Section 3: the problem ================= -->
+    <section class="problem" id="section-3" aria-labelledby="problem-title"
+             data-theme="blue" data-story="2 4.2" data-story-mode="sticky">
+      <!-- position: sticky keeps this panel on screen while the tall section scrolls past it, -->
+      <!-- so scrolling drives the three steps instead of moving the page (problem-timeline.js) -->
+      <div class="problem-sticky">
+        <div class="problem-panel glass glass-blue">
+        <h2 id="problem-title">Busy now is too late.</h2>
+        <p class="lead">Spotting overload as it happens leaves no time to add a controller. A forecast moves the warning earlier.</p>
+
+        <!-- Three short steps; the dots show which one is active -->
+        <div class="steps">
+          <div class="step-dots" aria-hidden="true"><i class="on"></i><i></i><i></i></div>
+          <p class="step-text" id="step-text"><b>13:00</b> Sector S6 is calm. Traffic is light.</p>
+        </div>
+
+        <!-- Chart drawn on canvas: detection now vs. a forecast that warns earlier -->
+        <div class="chart-card">
+          <canvas id="timeline" role="img"
+            aria-label="Illustrative timeline for one sector from 13:00 to 15:00. Workload rises and becomes overloaded at 14:00. At 13:30 a forecast predicts this, giving 30 minutes to act."></canvas>
+        </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= Section 4: the tagline ================= -->
+    <section class="tagline" id="section-4" aria-labelledby="tagline-title"
+             data-theme="corn" data-story="4.2 5" data-story-mode="sticky">
+      <!-- Same sticky trick as section 3: scroll progress lands the plane on the runway (tagline.js) -->
+      <div class="tagline-sticky">
+        <div class="tagline-panel glass glass-corn">
+          <h2 class="tag" id="tagline-title">
+            <span class="tag-line">See it coming.</span>
+            <span class="tag-line">Split it early.</span>
+            <span class="tag-line">Keep the sky calm.</span>
+          </h2>
+          <!-- runway lights and the landing plane are added by the script -->
+          <svg class="runway" id="runway" viewBox="0 0 640 170" aria-hidden="true"></svg>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- =========================================================
+       JAVASCRIPT
+       ========================================================= -->
+
+  <!-- Scripts, loaded at the end so the HTML above exists when they run.
+       Order matters: data files first, then the code that uses them. -->
+  <script src="data/airspace.js"></script>
+  <script src="data/land-home.js"></script>
+  <script src="js/home/hero-map.js"></script>
+  <script src="js/home/hero-card.js"></script>
+  <script src="js/home/scale.js"></script>
+  <script src="js/home/problem-timeline.js"></script>
+  <script src="js/home/story-scene.js"></script>
+  <script src="js/home/tagline.js"></script>
+  <script src="js/shared/nav.js"></script>
+</body>
+</html>
